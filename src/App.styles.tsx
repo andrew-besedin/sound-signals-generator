@@ -21,6 +21,7 @@ export const WrappedInnerContainer = styled(Box)({
 export const ContentContainer = styled(Box)({
   width: '100%',
   display: 'flex',
+  flexDirection: 'column',
   alignItems: 'center',
   gap: 20,
 });
