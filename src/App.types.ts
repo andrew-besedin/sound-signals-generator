@@ -25,7 +25,7 @@ export interface ContentProps {
 export interface ISoundDataHandlers {
   sine(params: DataHandlerParams): Float32Array<ArrayBuffer>;
   triangle(params: DataHandlerParams): Float32Array<ArrayBuffer>;
-  // square(params: DataHandlerParams): Float32Array<ArrayBuffer>;
-  // sawtooth(params: DataHandlerParams): Float32Array<ArrayBuffer>;
+  square(params: DataHandlerParams): Float32Array<ArrayBuffer>;
+  sawtooth(params: DataHandlerParams): Float32Array<ArrayBuffer>;
   noise(params: DataHandlerParams): Float32Array<ArrayBuffer>;
 }

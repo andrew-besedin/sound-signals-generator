@@ -36,6 +36,28 @@ class SoundDataHandlers implements ISoundDataHandlers {
 
     return data;
   }
+  square(params: DataHandlerParams): Float32Array<ArrayBuffer> {
+    const { data, sampleRate, freq } = params;
+    const period = sampleRate / freq;
+    
+    for (let i = 0; i < data.length; i++) {
+      const cyclePosition = i % period;
+      data[i] = cyclePosition < period / 2 ? 1 : -1;
+    }
+
+    return data;
+  }
+  sawtooth(params: DataHandlerParams): Float32Array<ArrayBuffer> {
+    const { data, sampleRate, freq } = params;
+    const period = sampleRate / freq;
+    
+    for (let i = 0; i < data.length; i++) {
+      const cyclePosition = i % period;
+      data[i] = (cyclePosition / period) * 2 - 1;
+    }
+
+    return data;
+  }
 }
 
 function MonophonicContent() {
@@ -43,7 +65,7 @@ function MonophonicContent() {
   const [playingNode, setPlayingNode] = useState<AudioBufferSourceNode | null>(null);
   const [waveType, setWaveType] = useState<WaveType>(WaveType.sine);
 
-  const handlePlay = (dataHandler: (params: DataHandlerParams) => DataHandlerParams["data"]) => {
+  const handlePlay = (dataHandler: (params: DataHandlerParams) => Float32Array<ArrayBuffer>) => {
     if (playingNode) {
       playingNode.stop();
       setPlayingNode(null);
@@ -86,9 +108,9 @@ function MonophonicContent() {
       case WaveType.triangle:
         return soundDataHandlers.triangle;
       case WaveType.square:
+        return soundDataHandlers.square;
       case WaveType.sawtooth:
-      default:
-        return soundDataHandlers.sine;
+        return soundDataHandlers.sawtooth;
     }
   }, [waveType]);
 
