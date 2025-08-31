@@ -1,5 +1,5 @@
-import { Button, FormControlLabel, Radio, RadioGroup, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
-import { useCallback, useState } from 'react';
+import { Button, FormControlLabel, Radio, RadioGroup, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { useCallback, useEffect, useState } from 'react';
 
 import './App.css'
 import { ContentContainer, WrappedInnerContainer, WrappedOuterContainer } from './App.styles';
@@ -64,6 +64,7 @@ function MonophonicContent() {
 
   const [playingNode, setPlayingNode] = useState<AudioBufferSourceNode | null>(null);
   const [waveType, setWaveType] = useState<WaveType>(WaveType.sine);
+  const [frequency, setFrequency] = useState('440');
 
   const handlePlay = (dataHandler: (params: DataHandlerParams) => Float32Array<ArrayBuffer>) => {
     if (playingNode) {
@@ -75,7 +76,12 @@ function MonophonicContent() {
 
     const sampleRate = ctx.sampleRate;
     const duration = 1;
-    const freq = 440;
+    const freq = Number(frequency);
+
+    if (Number.isNaN(freq) || freq <= 0 || freq > 10000) {
+      return;
+    }
+
     const buffer = ctx.createBuffer(1, sampleRate * duration, sampleRate);
     const data = buffer.getChannelData(0);
 
@@ -114,6 +120,10 @@ function MonophonicContent() {
     }
   }, [waveType]);
 
+  const onFrequencyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFrequency(e.target.value);
+  };
+
   return (
     <ContentContainer>
       <RadioGroup
@@ -129,6 +139,17 @@ function MonophonicContent() {
         <FormControlLabel value={WaveType.square} control={<Radio />} label="Square" />
         <FormControlLabel value={WaveType.noise} control={<Radio />} label="Noise" />
       </RadioGroup>
+      <TextField
+        variant="outlined"
+        label="Frequency (Hz)"
+        type="number"
+        value={frequency}
+        onChange={onFrequencyChange}
+        slotProps={{
+          htmlInput: { min: 0, max: 10000 },
+        }}
+        sx={{ width: '100%' }}
+      />
       {playingNode 
         ? <Button
             variant="outlined"
