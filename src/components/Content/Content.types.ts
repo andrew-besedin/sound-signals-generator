@@ -7,3 +7,11 @@ export const enum GenerateVariant {
 export interface ContentProps {
   generateVariant: GenerateVariant;
 }
+
+export const enum WaveType {
+  sine = 'sine',
+  square = 'square',
+  triangle = 'triangle',
+  sawtooth = 'sawtooth',
+  noise = 'noise',
+}

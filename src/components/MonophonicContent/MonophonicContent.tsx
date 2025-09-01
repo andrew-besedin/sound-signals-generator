@@ -1,8 +1,8 @@
 import { Button, FormControlLabel, FormLabel, Radio, RadioGroup, Slider, TextField } from '@mui/material';
 import { useCallback, useState } from 'react';
 
-import { WaveType, type DataHandlerParams, type ISoundDataHandlers, type SoundDataHandler } from './MonophonicContent.types';
-import { ContentContainer, FormRow } from '../Content';
+import { type DataHandlerParams, type ISoundDataHandlers, type SoundDataHandler } from './MonophonicContent.types';
+import { ContentContainer, FormRow, WaveType } from '../Content';
 
 class SoundDataHandlers implements ISoundDataHandlers {
   sine(params: DataHandlerParams): Float32Array<ArrayBuffer> {
@@ -42,7 +42,7 @@ class SoundDataHandlers implements ISoundDataHandlers {
     
     for (let i = 0; i < data.length; i++) {
       const cyclePosition = i % period;
-      data[i] = cyclePosition < period * dutyCycle ? 1 : -1;
+      data[i] = cyclePosition < (period * dutyCycle) ? 1 : -1;
     }
 
     return data;

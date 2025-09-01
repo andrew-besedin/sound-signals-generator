@@ -2,6 +2,7 @@ export interface DataHandlerParams {
   data: Float32Array<ArrayBuffer>;
   sampleRate: number;
   freq: number;
+  overtoneVolumes: number[];
   dutyCycle?: number;
 }
 

@@ -1,0 +1,1 @@
+export { PolyphonicContent } from './PolyphonicContent';

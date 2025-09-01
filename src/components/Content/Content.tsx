@@ -1,4 +1,5 @@
 import { MonophonicContent } from "../MonophonicContent";
+import { PolyphonicContent } from "../PolyphonicContent";
 import { GenerateVariant, type ContentProps } from "./Content.types";
 
 export function Content({
@@ -8,7 +9,7 @@ export function Content({
     case GenerateVariant.monophonic:
       return <MonophonicContent />;
     case GenerateVariant.polyphonic:
-      return null;
+      return <PolyphonicContent />;
     case GenerateVariant.modulated:
       return null;
   }
