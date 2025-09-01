@@ -1,8 +1,8 @@
-import { Button, FormControlLabel, Radio, RadioGroup, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Button, FormControlLabel, FormLabel, Radio, RadioGroup, Slider, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { useCallback, useState } from 'react';
 
 import './App.css'
-import { ContentContainer, WrappedInnerContainer, WrappedOuterContainer } from './App.styles';
+import { ContentContainer, FormRow, WrappedInnerContainer, WrappedOuterContainer } from './App.styles';
 import { GenerateVariant, WaveType, type ContentProps, type DataHandlerParams, type ISoundDataHandlers, type SoundDataHandler } from './App.types';
 
 class SoundDataHandlers implements ISoundDataHandlers {
@@ -38,11 +38,12 @@ class SoundDataHandlers implements ISoundDataHandlers {
   }
   square(params: DataHandlerParams): Float32Array<ArrayBuffer> {
     const { data, sampleRate, freq } = params;
+    const dutyCycle = params.dutyCycle || 0.5;
     const period = sampleRate / freq;
     
     for (let i = 0; i < data.length; i++) {
       const cyclePosition = i % period;
-      data[i] = cyclePosition < period / 2 ? 1 : -1;
+      data[i] = cyclePosition < period * dutyCycle ? 1 : -1;
     }
 
     return data;
@@ -65,6 +66,7 @@ function MonophonicContent() {
   const [playingNode, setPlayingNode] = useState<AudioBufferSourceNode | null>(null);
   const [waveType, setWaveType] = useState<WaveType>(WaveType.sine);
   const [frequency, setFrequency] = useState('440');
+  const [dutyCyclePercent, setDutyCyclePercent] = useState(50);
 
   const handlePlay = (dataHandler: SoundDataHandler) => {
     if (playingNode) {
@@ -85,7 +87,7 @@ function MonophonicContent() {
     const buffer = ctx.createBuffer(1, sampleRate * duration, sampleRate);
     const data = buffer.getChannelData(0);
 
-    data.set(dataHandler({ data, sampleRate, freq }));
+    data.set(dataHandler({ data, sampleRate, freq, dutyCycle: dutyCyclePercent / 100 }));
 
     const source = ctx.createBufferSource();
     source.buffer = buffer;
@@ -150,6 +152,15 @@ function MonophonicContent() {
         }}
         sx={{ width: '100%' }}
       />
+      {waveType === WaveType.square && (
+        <FormRow>
+          <FormLabel>Duty Cycle</FormLabel>
+          <Slider
+            value={dutyCyclePercent}
+            onChange={(_, value) => setDutyCyclePercent(value)}
+          />
+        </FormRow>
+      )}
       {playingNode 
         ? <Button
             variant="outlined"

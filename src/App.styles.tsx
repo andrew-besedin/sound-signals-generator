@@ -25,3 +25,10 @@ export const ContentContainer = styled(Box)({
   alignItems: 'center',
   gap: 20,
 });
+
+export const FormRow = styled(Box)({
+  width: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 10,
+});
