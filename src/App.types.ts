@@ -16,16 +16,19 @@ export interface DataHandlerParams {
   data: Float32Array<ArrayBuffer>;
   sampleRate: number;
   freq: number;
+  dutyCycle?: number;
 }
 
 export interface ContentProps {
   generateVariant: GenerateVariant;
 }
 
+export type SoundDataHandler = (params: DataHandlerParams) => Float32Array<ArrayBuffer>;
+
 export interface ISoundDataHandlers {
-  sine(params: DataHandlerParams): Float32Array<ArrayBuffer>;
-  triangle(params: DataHandlerParams): Float32Array<ArrayBuffer>;
-  square(params: DataHandlerParams): Float32Array<ArrayBuffer>;
-  sawtooth(params: DataHandlerParams): Float32Array<ArrayBuffer>;
-  noise(params: DataHandlerParams): Float32Array<ArrayBuffer>;
+  sine: SoundDataHandler;
+  triangle: SoundDataHandler;
+  noise: SoundDataHandler;
+  square: SoundDataHandler;
+  sawtooth: SoundDataHandler;
 }

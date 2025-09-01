@@ -1,9 +1,9 @@
 import { Button, FormControlLabel, Radio, RadioGroup, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import './App.css'
 import { ContentContainer, WrappedInnerContainer, WrappedOuterContainer } from './App.styles';
-import { GenerateVariant, WaveType, type ContentProps, type DataHandlerParams, type ISoundDataHandlers } from './App.types';
+import { GenerateVariant, WaveType, type ContentProps, type DataHandlerParams, type ISoundDataHandlers, type SoundDataHandler } from './App.types';
 
 class SoundDataHandlers implements ISoundDataHandlers {
   sine(params: DataHandlerParams): Float32Array<ArrayBuffer> {
@@ -66,7 +66,7 @@ function MonophonicContent() {
   const [waveType, setWaveType] = useState<WaveType>(WaveType.sine);
   const [frequency, setFrequency] = useState('440');
 
-  const handlePlay = (dataHandler: (params: DataHandlerParams) => Float32Array<ArrayBuffer>) => {
+  const handlePlay = (dataHandler: SoundDataHandler) => {
     if (playingNode) {
       playingNode.stop();
       setPlayingNode(null);
