@@ -1,7 +1,7 @@
 import { Button, FormControlLabel, FormLabel, Radio, RadioGroup, Slider, TextField } from "@mui/material";
+import { useCallback, useState } from "react";
 
 import { ContentContainer, FormRow, WaveType } from "../Content";
-import { useCallback, useState } from "react";
 import { OvertonesButtonsContainer } from "./PolyphonicContent.styles";
 import type { DataHandlerParams, ISoundDataHandlers, SoundDataHandler } from "./PolyphonicContent.types";
 
@@ -119,6 +119,14 @@ export function PolyphonicContent() {
     setOvertoneVolumes(overtoneVolumes.filter((_, i) => i !== index));
   }, [overtoneVolumes]);
 
+  const onChangeWaveType = (_: React.ChangeEvent<HTMLInputElement>, value: string) => {
+    setWaveType(value as WaveType);
+  }
+
+  const onChangeDutyCycle = (_: Event, value: number ) => {
+    setDutyCyclePercent(value);
+  }
+
   const onOvertoneVolumeChange = useCallback((index: number, value: number) => {
     const newOvertoneVolumes = [...overtoneVolumes];
     newOvertoneVolumes[index] = value;
@@ -186,7 +194,7 @@ export function PolyphonicContent() {
           width: '100%',
         }}
         defaultValue={WaveType.sine}
-        onChange={(_, value) => setWaveType(value as WaveType)}
+        onChange={onChangeWaveType}
       >
         <FormControlLabel value={WaveType.sine} control={<Radio />} label="Sine" />
         <FormControlLabel value={WaveType.sawtooth} control={<Radio />} label="Sawtooth" />
@@ -199,7 +207,7 @@ export function PolyphonicContent() {
           <FormLabel>Duty Cycle</FormLabel>
           <Slider
             value={dutyCyclePercent}
-            onChange={(_, value) => setDutyCyclePercent(value)}
+            onChange={onChangeDutyCycle}
           />
         </FormRow>
       )}

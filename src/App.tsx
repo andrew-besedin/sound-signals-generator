@@ -8,6 +8,12 @@ import { Content, GenerateVariant } from './components/Content';
 function App() {
   const [generateVariant, setGenerateVariant] = useState<GenerateVariant>(GenerateVariant.monophonic);
 
+
+  const onGenerateVariantChange = (_: React.MouseEvent<HTMLElement>, value: GenerateVariant) => {
+    if (value === null) return;
+    setGenerateVariant(value);
+  }
+
   return (
     <WrappedOuterContainer>
       <WrappedInnerContainer>
@@ -16,7 +22,7 @@ function App() {
         </Typography>
         <ToggleButtonGroup
           value={generateVariant}
-          onChange={(_, value) => setGenerateVariant(value as GenerateVariant)}
+          onChange={onGenerateVariantChange}
           exclusive
           sx={{ width: '100%' }}
         >

@@ -43,6 +43,7 @@ class SoundDataHandlers implements ISoundDataHandlers {
     for (let i = 0; i < data.length; i++) {
       const cyclePosition = i % period;
       data[i] = cyclePosition < (period * dutyCycle) ? 1 : -1;
+      console.log('data[i]', data[i]);
     }
 
     return data;
@@ -125,6 +126,14 @@ export function MonophonicContent() {
     setFrequency(e.target.value);
   };
 
+  const onChangeWaveType = (_: React.ChangeEvent<HTMLInputElement>, value: string) => {
+    setWaveType(value as WaveType);
+  }
+
+  const onChangeDutyCycle = (_: Event, value: number ) => {
+    setDutyCyclePercent(value);
+  }
+
   return (
     <ContentContainer>
       <RadioGroup
@@ -132,7 +141,7 @@ export function MonophonicContent() {
           width: '100%',
         }}
         defaultValue={WaveType.sine}
-        onChange={(_, value) => setWaveType(value as WaveType)}
+        onChange={onChangeWaveType}
       >
         <FormControlLabel value={WaveType.sine} control={<Radio />} label="Sine" />
         <FormControlLabel value={WaveType.sawtooth} control={<Radio />} label="Sawtooth" />
@@ -156,7 +165,7 @@ export function MonophonicContent() {
           <FormLabel>Duty Cycle</FormLabel>
           <Slider
             value={dutyCyclePercent}
-            onChange={(_, value) => setDutyCyclePercent(value)}
+            onChange={onChangeDutyCycle}
           />
         </FormRow>
       )}
