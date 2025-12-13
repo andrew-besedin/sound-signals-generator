@@ -7,12 +7,12 @@ import { ModulatedAmplitudeWrapper } from "./ModulatedContent.styles";
 
 class SoundDataHandlers implements ISoundDataHandlers {
   private carrierFreq = 440;
-  private getCarrierSignalValue(params: DataHandlerParams, i: number, modulationArgTerm?: number): number {
+  private getCarrierSignalValue(params: DataHandlerParams, i: number, frequency?: number): number {
     const { sampleRate } = params;
-    const freq = this.carrierFreq;
+    const freq = frequency ?? this.carrierFreq;
 
     // Sine wave
-    return Math.sin(2 * Math.PI * freq * i / sampleRate + (modulationArgTerm ?? 0));
+    return Math.sin(2 * Math.PI * freq * i / sampleRate);
   }
   sine(params: DataHandlerParams) {
     const { data, sampleRate, modulateType, modulatingFreq, modulatingAmplitude } = params;
@@ -22,11 +22,11 @@ class SoundDataHandlers implements ISoundDataHandlers {
 
       if (modulateType === ModulateType.amplitude) {
         const carrierSignalValue = this.getCarrierSignalValue(params, i);
-        data[i] = carrierSignalValue * (1 + (modulatingSignalValue * modulatingAmplitude * 0.5));
+        data[i] = carrierSignalValue * (0.5 + (modulatingSignalValue * modulatingAmplitude * 0.5));
       } else if (modulateType === ModulateType.frequency) {
-        const modulationArgTerm = modulatingSignalValue * modulatingAmplitude * this.carrierFreq * 0.5;
+        const resultCarrierFreq = (modulatingSignalValue * modulatingAmplitude * 0.5 + 1) * this.carrierFreq;
 
-        data[i] = this.getCarrierSignalValue(params, i, modulationArgTerm);
+        data[i] = this.getCarrierSignalValue(params, i, resultCarrierFreq);
       }
     }
 
@@ -44,11 +44,11 @@ class SoundDataHandlers implements ISoundDataHandlers {
 
       if (modulateType === ModulateType.amplitude) {
         const carrierSignalValue = this.getCarrierSignalValue(params, i);
-        data[i] = carrierSignalValue * (1 + (modulatingSignalValue * modulatingAmplitude * 0.5));
+        data[i] = carrierSignalValue * (0.5 + (modulatingSignalValue * modulatingAmplitude * 0.5));
       } else if (modulateType === ModulateType.frequency) {
-        const modulationArgTerm = modulatingSignalValue * modulatingAmplitude * this.carrierFreq * 0.5;
+        const resultCarrierFreq = (modulatingSignalValue * modulatingAmplitude * 0.5 + 1) * this.carrierFreq;
 
-        data[i] = this.getCarrierSignalValue(params, i, modulationArgTerm);
+        data[i] = this.getCarrierSignalValue(params, i, resultCarrierFreq);
       }
     }
 
@@ -63,11 +63,11 @@ class SoundDataHandlers implements ISoundDataHandlers {
       const modulatingSignalValue = (cyclePosition / period) * 2 - 1;
       if (modulateType === ModulateType.amplitude) {
         const carrierSignalValue = this.getCarrierSignalValue(params, i);
-        data[i] = carrierSignalValue * (1 + (modulatingSignalValue * modulatingAmplitude * 0.5));
+        data[i] = carrierSignalValue * (0.5 + (modulatingSignalValue * modulatingAmplitude * 0.5));
       } else if (modulateType === ModulateType.frequency) {
-        const modulationArgTerm = modulatingSignalValue * modulatingAmplitude * this.carrierFreq * 0.5;
+        const resultCarrierFreq = (modulatingSignalValue * modulatingAmplitude * 0.5 + 1) * this.carrierFreq;
 
-        data[i] = this.getCarrierSignalValue(params, i, modulationArgTerm);
+        data[i] = this.getCarrierSignalValue(params, i, resultCarrierFreq);
       }
     }
 
@@ -85,11 +85,11 @@ class SoundDataHandlers implements ISoundDataHandlers {
 
       if (modulateType === ModulateType.amplitude) {
         const carrierSignalValue = this.getCarrierSignalValue(params, i);
-        data[i] = carrierSignalValue * (1 + (modulatingSignalValue * modulatingAmplitude * 0.5));
+        data[i] = carrierSignalValue * (0.5 + (modulatingSignalValue * modulatingAmplitude * 0.5));
       } else if (modulateType === ModulateType.frequency) {
-        const modulationArgTerm = modulatingSignalValue * modulatingAmplitude * this.carrierFreq * 0.5;
+        const resultCarrierFreq = (modulatingSignalValue * modulatingAmplitude * 0.5 + 1) * this.carrierFreq;
 
-        data[i] = this.getCarrierSignalValue(params, i, modulationArgTerm);
+        data[i] = this.getCarrierSignalValue(params, i, resultCarrierFreq);
       }
     }
 
