@@ -21,7 +21,7 @@ class SoundDataHandlers implements ISoundDataHandlers {
     for (let i = 0; i < data.length; i++) {
       const cyclePosition = i % period;
       const value = (cyclePosition / period) * 4 - 1;
-      data[i] = value <= 1 ? value : 3 - value;
+      data[i] = value <= 1 ? value : 2 - value;
     }
 
     return data;

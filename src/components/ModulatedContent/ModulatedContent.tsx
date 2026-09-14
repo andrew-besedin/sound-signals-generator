@@ -24,7 +24,7 @@ class SoundDataHandlers implements ISoundDataHandlers {
         const carrierSignalValue = this.getCarrierSignalValue(params, i);
         data[i] = carrierSignalValue * (0.5 + (modulatingSignalValue * modulatingAmplitude * 0.5));
       } else if (modulateType === ModulateType.frequency) {
-        const resultCarrierFreq = (modulatingSignalValue * modulatingAmplitude * 0.5 + 1) * this.carrierFreq;
+        const resultCarrierFreq = (2 * Math.PI * modulatingSignalValue * modulatingAmplitude * 0.5) * sampleRate / i + this.carrierFreq;
 
         data[i] = this.getCarrierSignalValue(params, i, resultCarrierFreq);
       }
