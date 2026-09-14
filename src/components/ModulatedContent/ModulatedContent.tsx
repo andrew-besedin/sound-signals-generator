@@ -7,6 +7,9 @@ import { ModulatedAmplitudeWrapper } from "./ModulatedContent.styles";
 
 class SoundDataHandlers implements ISoundDataHandlers {
   private carrierFreq = 440;
+  private frequencyDeviation = this.carrierFreq / 2;
+  private carrierPhase = 0;
+
   private getCarrierSignalValue(params: DataHandlerParams, i: number, frequency?: number): number {
     const { sampleRate } = params;
     const freq = frequency ?? this.carrierFreq;
@@ -14,83 +17,84 @@ class SoundDataHandlers implements ISoundDataHandlers {
     // Sine wave
     return Math.sin(2 * Math.PI * freq * i / sampleRate);
   }
+
+  private modulate(params: DataHandlerParams, i: number, modulatingSignalValue: number): number {
+    const { sampleRate, modulateType, modulatingAmplitude } = params;
+
+    if (modulateType === ModulateType.amplitude) {
+      const carrierSignalValue = this.getCarrierSignalValue(params, i);
+
+      return carrierSignalValue * (0.5 + (modulatingSignalValue * modulatingAmplitude * 0.5));
+    }
+
+    const instantFreq = Math.max(
+      this.carrierFreq + modulatingSignalValue * modulatingAmplitude * this.frequencyDeviation,
+      0,
+    );
+
+    this.carrierPhase += 2 * Math.PI * instantFreq / sampleRate;
+
+    return Math.sin(this.carrierPhase);
+  }
+
   sine(params: DataHandlerParams) {
-    const { data, sampleRate, modulateType, modulatingFreq, modulatingAmplitude } = params;
+    const { data, sampleRate, modulatingFreq } = params;
+
+    this.carrierPhase = 0;
 
     for (let i = 0; i < data.length; i++) {
       const modulatingSignalValue = Math.sin(2 * Math.PI * modulatingFreq * i / sampleRate);
 
-      if (modulateType === ModulateType.amplitude) {
-        const carrierSignalValue = this.getCarrierSignalValue(params, i);
-        data[i] = carrierSignalValue * (0.5 + (modulatingSignalValue * modulatingAmplitude * 0.5));
-      } else if (modulateType === ModulateType.frequency) {
-        const resultCarrierFreq = (2 * Math.PI * modulatingSignalValue * modulatingAmplitude * 0.5) * sampleRate / i + this.carrierFreq;
-
-        data[i] = this.getCarrierSignalValue(params, i, resultCarrierFreq);
-      }
+      data[i] = this.modulate(params, i, modulatingSignalValue);
     }
 
     return data;
   }
   triangle(params: DataHandlerParams) {
-    const { data, sampleRate, modulateType, modulatingFreq, modulatingAmplitude } = params;
+    const { data, sampleRate, modulatingFreq } = params;
+    const period = sampleRate / modulatingFreq;
+
+    this.carrierPhase = 0;
 
     for (let i = 0; i < data.length; i++) {
-      const period = sampleRate / modulatingFreq;
       const cyclePosition = i % period;
       const value = (cyclePosition / period) * 4 - 1;
 
-      const modulatingSignalValue = value <= 1 ? value : 3 - value
+      const modulatingSignalValue = value <= 1 ? value : 2 - value;
 
-      if (modulateType === ModulateType.amplitude) {
-        const carrierSignalValue = this.getCarrierSignalValue(params, i);
-        data[i] = carrierSignalValue * (0.5 + (modulatingSignalValue * modulatingAmplitude * 0.5));
-      } else if (modulateType === ModulateType.frequency) {
-        const resultCarrierFreq = (modulatingSignalValue * modulatingAmplitude * 0.5 + 1) * this.carrierFreq;
-
-        data[i] = this.getCarrierSignalValue(params, i, resultCarrierFreq);
-      }
+      data[i] = this.modulate(params, i, modulatingSignalValue);
     }
 
     return data;
   }
   sawtooth(params: DataHandlerParams) {
-    const { data, sampleRate, modulateType, modulatingFreq, modulatingAmplitude } = params;
+    const { data, sampleRate, modulatingFreq } = params;
+    const period = sampleRate / modulatingFreq;
+
+    this.carrierPhase = 0;
 
     for (let i = 0; i < data.length; i++) {
-      const period = sampleRate / modulatingFreq;
       const cyclePosition = i % period;
       const modulatingSignalValue = (cyclePosition / period) * 2 - 1;
-      if (modulateType === ModulateType.amplitude) {
-        const carrierSignalValue = this.getCarrierSignalValue(params, i);
-        data[i] = carrierSignalValue * (0.5 + (modulatingSignalValue * modulatingAmplitude * 0.5));
-      } else if (modulateType === ModulateType.frequency) {
-        const resultCarrierFreq = (modulatingSignalValue * modulatingAmplitude * 0.5 + 1) * this.carrierFreq;
 
-        data[i] = this.getCarrierSignalValue(params, i, resultCarrierFreq);
-      }
+      data[i] = this.modulate(params, i, modulatingSignalValue);
     }
 
     return data;
   }
   square(params: DataHandlerParams) {
-    const { data, sampleRate, modulateType, modulatingFreq, modulatingAmplitude } = params;
+    const { data, sampleRate, modulatingFreq } = params;
+    const period = sampleRate / modulatingFreq;
 
     const dutyCycle = params.dutyCycle ?? 0.5;
 
+    this.carrierPhase = 0;
+
     for (let i = 0; i < data.length; i++) {
-      const period = sampleRate / modulatingFreq;
       const cyclePosition = i % period;
       const modulatingSignalValue = cyclePosition < (period * dutyCycle) ? 1 : -1;
 
-      if (modulateType === ModulateType.amplitude) {
-        const carrierSignalValue = this.getCarrierSignalValue(params, i);
-        data[i] = carrierSignalValue * (0.5 + (modulatingSignalValue * modulatingAmplitude * 0.5));
-      } else if (modulateType === ModulateType.frequency) {
-        const resultCarrierFreq = (modulatingSignalValue * modulatingAmplitude * 0.5 + 1) * this.carrierFreq;
-
-        data[i] = this.getCarrierSignalValue(params, i, resultCarrierFreq);
-      }
+      data[i] = this.modulate(params, i, modulatingSignalValue);
     }
 
     return data;
