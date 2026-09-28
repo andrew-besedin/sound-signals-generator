@@ -1,140 +1,140 @@
-import { Button, FormControlLabel, FormLabel, Radio, RadioGroup, Slider, TextField, ToggleButton, ToggleButtonGroup } from "@mui/material";
+import { Button, FormLabel, MenuItem, Select, Slider, TextField, ToggleButton, ToggleButtonGroup } from "@mui/material";
 import { useCallback, useState } from "react";
 
 import { ContentContainer, FormRow, WaveType } from "../Content";
-import { ModulateType, type DataHandlerParams, type ISoundDataHandlers, type SoundDataHandler } from "./ModulatedContent.types";
+import { ModulateType, type DataHandlerParams, type ISignalValueHandlers, type SignalValueHandler, type SignalValueParams } from "./ModulatedContent.types";
 import { ModulatedAmplitudeWrapper } from "./ModulatedContent.styles";
 
-class SoundDataHandlers implements ISoundDataHandlers {
-  private carrierFreq = 440;
-  private frequencyDeviation = this.carrierFreq / 2;
-  private carrierPhase = 0;
+const waveTypeOptions: { value: WaveType, label: string }[] = [
+  { value: WaveType.sine, label: 'Sine' },
+  { value: WaveType.sawtooth, label: 'Sawtooth' },
+  { value: WaveType.triangle, label: 'Triangle' },
+  { value: WaveType.square, label: 'Square' },
+];
 
-  private getCarrierSignalValue(params: DataHandlerParams, i: number, frequency?: number): number {
-    const { sampleRate } = params;
-    const freq = frequency ?? this.carrierFreq;
-
-    // Sine wave
-    return Math.sin(2 * Math.PI * freq * i / sampleRate);
+class SignalValueHandlers implements ISignalValueHandlers {
+  sine({ phase }: SignalValueParams): number {
+    return Math.sin(2 * Math.PI * phase);
   }
+  triangle({ phase }: SignalValueParams): number {
+    const value = phase * 4 - 1;
 
-  private modulate(params: DataHandlerParams, i: number, modulatingSignalValue: number): number {
-    const { sampleRate, modulateType, modulatingAmplitude } = params;
+    return value <= 1 ? value : 2 - value;
+  }
+  square({ phase, dutyCycle }: SignalValueParams): number {
+    return phase < dutyCycle ? 1 : -1;
+  }
+  sawtooth({ phase }: SignalValueParams): number {
+    return phase * 2 - 1;
+  }
+}
+
+const signalValueHandlers = new SignalValueHandlers();
+
+function getSignalValueHandler(waveType: WaveType): SignalValueHandler {
+  switch (waveType) {
+    case WaveType.triangle:
+      return signalValueHandlers.triangle;
+    case WaveType.square:
+      return signalValueHandlers.square;
+    case WaveType.sawtooth:
+      return signalValueHandlers.sawtooth;
+    default:
+      return signalValueHandlers.sine;
+  }
+}
+
+function fillSoundData(params: DataHandlerParams): Float32Array<ArrayBuffer> {
+  const {
+    data,
+    sampleRate,
+    modulateType,
+    carrierWaveType,
+    carrierFreq,
+    carrierDutyCycle,
+    modulatingWaveType,
+    modulatingFreq,
+    modulatingAmplitude,
+    modulatingDutyCycle,
+  } = params;
+
+  const getCarrierSignalValue = getSignalValueHandler(carrierWaveType);
+  const getModulatingSignalValue = getSignalValueHandler(modulatingWaveType);
+
+  const frequencyDeviation = carrierFreq / 2;
+
+  let carrierPhase = 0;
+
+  for (let i = 0; i < data.length; i++) {
+    const modulatingPhase = (modulatingFreq * i / sampleRate) % 1;
+    const modulatingSignalValue = getModulatingSignalValue({ phase: modulatingPhase, dutyCycle: modulatingDutyCycle });
+
+    const carrierSignalValue = getCarrierSignalValue({ phase: carrierPhase, dutyCycle: carrierDutyCycle });
 
     if (modulateType === ModulateType.amplitude) {
-      const carrierSignalValue = this.getCarrierSignalValue(params, i);
+      data[i] = carrierSignalValue * (0.5 + (modulatingSignalValue * modulatingAmplitude * 0.5));
+      carrierPhase = (carrierPhase + carrierFreq / sampleRate) % 1;
+    } else {
+      const instantFreq = Math.max(
+        carrierFreq + modulatingSignalValue * modulatingAmplitude * frequencyDeviation,
+        0,
+      );
 
-      return carrierSignalValue * (0.5 + (modulatingSignalValue * modulatingAmplitude * 0.5));
+      data[i] = carrierSignalValue;
+      carrierPhase = (carrierPhase + instantFreq / sampleRate) % 1;
     }
-
-    const instantFreq = Math.max(
-      this.carrierFreq + modulatingSignalValue * modulatingAmplitude * this.frequencyDeviation,
-      0,
-    );
-
-    this.carrierPhase += 2 * Math.PI * instantFreq / sampleRate;
-
-    return Math.sin(this.carrierPhase);
   }
 
-  sine(params: DataHandlerParams) {
-    const { data, sampleRate, modulatingFreq } = params;
-
-    this.carrierPhase = 0;
-
-    for (let i = 0; i < data.length; i++) {
-      const modulatingSignalValue = Math.sin(2 * Math.PI * modulatingFreq * i / sampleRate);
-
-      data[i] = this.modulate(params, i, modulatingSignalValue);
-    }
-
-    return data;
-  }
-  triangle(params: DataHandlerParams) {
-    const { data, sampleRate, modulatingFreq } = params;
-    const period = sampleRate / modulatingFreq;
-
-    this.carrierPhase = 0;
-
-    for (let i = 0; i < data.length; i++) {
-      const cyclePosition = i % period;
-      const value = (cyclePosition / period) * 4 - 1;
-
-      const modulatingSignalValue = value <= 1 ? value : 2 - value;
-
-      data[i] = this.modulate(params, i, modulatingSignalValue);
-    }
-
-    return data;
-  }
-  sawtooth(params: DataHandlerParams) {
-    const { data, sampleRate, modulatingFreq } = params;
-    const period = sampleRate / modulatingFreq;
-
-    this.carrierPhase = 0;
-
-    for (let i = 0; i < data.length; i++) {
-      const cyclePosition = i % period;
-      const modulatingSignalValue = (cyclePosition / period) * 2 - 1;
-
-      data[i] = this.modulate(params, i, modulatingSignalValue);
-    }
-
-    return data;
-  }
-  square(params: DataHandlerParams) {
-    const { data, sampleRate, modulatingFreq } = params;
-    const period = sampleRate / modulatingFreq;
-
-    const dutyCycle = params.dutyCycle ?? 0.5;
-
-    this.carrierPhase = 0;
-
-    for (let i = 0; i < data.length; i++) {
-      const cyclePosition = i % period;
-      const modulatingSignalValue = cyclePosition < (period * dutyCycle) ? 1 : -1;
-
-      data[i] = this.modulate(params, i, modulatingSignalValue);
-    }
-
-    return data;
-  }
+  return data;
 }
 
 export function ModulatedContent() {
   const [playingNode, setPlayingNode] = useState<AudioBufferSourceNode | null>(null);
-  const [waveType, setWaveType] = useState<WaveType>(WaveType.sine);
-  const [frequency, setFrequency] = useState('2');
-  const [dutyCyclePercent, setDutyCyclePercent] = useState(50);
-  const [modulatedAmplitudePercent, setModulatedAmplitudePercent] = useState(50);
   const [modulateType, setModulateType] = useState<ModulateType>(ModulateType.amplitude);
 
-  const handlePlay = (dataHandler: SoundDataHandler) => {
+  const [carrierWaveType, setCarrierWaveType] = useState<WaveType>(WaveType.sine);
+  const [carrierFrequency, setCarrierFrequency] = useState('440');
+  const [carrierDutyCyclePercent, setCarrierDutyCyclePercent] = useState(50);
+
+  const [modulatingWaveType, setModulatingWaveType] = useState<WaveType>(WaveType.sine);
+  const [modulatingFrequency, setModulatingFrequency] = useState('2');
+  const [modulatingDutyCyclePercent, setModulatingDutyCyclePercent] = useState(50);
+  const [modulatedAmplitudePercent, setModulatedAmplitudePercent] = useState(50);
+
+  const isValidFrequency = (freq: number) => !Number.isNaN(freq) && freq > 0 && freq <= 10000;
+
+  const handlePlay = () => {
     if (playingNode) {
       playingNode.stop();
       setPlayingNode(null);
+    }
+
+    const carrierFreq = Number(carrierFrequency);
+    const modulatingFreq = Number(modulatingFrequency);
+
+    if (!isValidFrequency(carrierFreq) || !isValidFrequency(modulatingFreq)) {
+      return;
     }
 
     const ctx = new AudioContext();
 
     const sampleRate = ctx.sampleRate;
     const duration = 1;
-    const freq = Number(frequency);
-
-    if (Number.isNaN(freq) || freq <= 0 || freq > 10000) {
-      return;
-    }
 
     const buffer = ctx.createBuffer(1, sampleRate * duration, sampleRate);
     const data = buffer.getChannelData(0);
 
-    data.set(dataHandler({
+    data.set(fillSoundData({
       data,
       sampleRate,
-      modulatingFreq: freq,
-      dutyCycle: dutyCyclePercent / 100,
       modulateType,
+      carrierWaveType,
+      carrierFreq,
+      carrierDutyCycle: carrierDutyCyclePercent / 100,
+      modulatingWaveType,
+      modulatingFreq,
       modulatingAmplitude: modulatedAmplitudePercent / 100,
+      modulatingDutyCycle: modulatingDutyCyclePercent / 100,
     }));
 
     const source = ctx.createBufferSource();
@@ -153,17 +153,20 @@ export function ModulatedContent() {
     setPlayingNode(null);
   }, [playingNode]);
 
-
-  const onFrequencyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFrequency(e.target.value);
+  const onCarrierFrequencyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCarrierFrequency(e.target.value);
   };
 
-  const onChangeWaveType = (_: React.ChangeEvent<HTMLInputElement>, value: string) => {
-    setWaveType(value as WaveType);
+  const onModulatingFrequencyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setModulatingFrequency(e.target.value);
+  };
+
+  const onChangeCarrierDutyCycle = (_: Event, value: number) => {
+    setCarrierDutyCyclePercent(value);
   }
 
-  const onChangeDutyCycle = (_: Event, value: number) => {
-    setDutyCyclePercent(value);
+  const onChangeModulatingDutyCycle = (_: Event, value: number) => {
+    setModulatingDutyCyclePercent(value);
   }
 
   const onChangeModulatedAmplitude = (_: Event, value: number) => {
@@ -173,22 +176,6 @@ export function ModulatedContent() {
   const onChangeModulateType = (_: React.MouseEvent<HTMLElement, MouseEvent>, value: ModulateType) => {
     if (value === null) return;
     setModulateType(value as ModulateType);
-  }
-
-  const getSelectedDataHandler = (): SoundDataHandler => {
-    const handlers = new SoundDataHandlers();
-    switch (waveType) {
-      case WaveType.sine:
-        return handlers.sine.bind(handlers);
-      case WaveType.triangle:
-        return handlers.triangle.bind(handlers);
-      case WaveType.square:
-        return handlers.square.bind(handlers);
-      case WaveType.sawtooth:
-        return handlers.sawtooth.bind(handlers);
-      default:
-        return handlers.sine.bind(handlers);
-    }
   }
 
   return (
@@ -212,28 +199,58 @@ export function ModulatedContent() {
           Frequency
         </ToggleButton>
       </ToggleButtonGroup>
+
+      <FormRow>
+        <FormLabel>Carrier Wave Type</FormLabel>
+        <Select
+          size="small"
+          value={carrierWaveType}
+          onChange={(e) => setCarrierWaveType(e.target.value as WaveType)}
+        >
+          {waveTypeOptions.map((option) => (
+            <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+          ))}
+        </Select>
+      </FormRow>
+      <TextField
+        variant="outlined"
+        label="Carrier Frequency (Hz)"
+        type="number"
+        value={carrierFrequency}
+        onChange={onCarrierFrequencyChange}
+        slotProps={{
+          htmlInput: { min: 0, max: 10000 },
+        }}
+        sx={{ width: '100%' }}
+      />
+      {carrierWaveType === WaveType.square && (
+        <FormRow>
+          <FormLabel>Carrier Duty Cycle</FormLabel>
+          <Slider
+            value={carrierDutyCyclePercent}
+            onChange={onChangeCarrierDutyCycle}
+          />
+        </FormRow>
+      )}
+
       <FormRow>
         <FormLabel>Modulating Wave Type</FormLabel>
-        <RadioGroup
-          sx={{
-            width: '100%',
-          }}
-          defaultValue={WaveType.sine}
-          onChange={onChangeWaveType}
+        <Select
+          size="small"
+          value={modulatingWaveType}
+          onChange={(e) => setModulatingWaveType(e.target.value as WaveType)}
         >
-          <FormControlLabel value={WaveType.sine} control={<Radio />} label="Sine" />
-          <FormControlLabel value={WaveType.sawtooth} control={<Radio />} label="Sawtooth" />
-          <FormControlLabel value={WaveType.triangle} control={<Radio />} label="Triangle" />
-          <FormControlLabel value={WaveType.square} control={<Radio />} label="Square" />
-        </RadioGroup>
+          {waveTypeOptions.map((option) => (
+            <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+          ))}
+        </Select>
       </FormRow>
-
       <TextField
         variant="outlined"
         label="Modulating Wave Frequency (Hz)"
         type="number"
-        value={frequency}
-        onChange={onFrequencyChange}
+        value={modulatingFrequency}
+        onChange={onModulatingFrequencyChange}
         slotProps={{
           htmlInput: { min: 0, max: 10000 },
         }}
@@ -251,12 +268,12 @@ export function ModulatedContent() {
         </ModulatedAmplitudeWrapper>
 
       </FormRow>
-      {waveType === WaveType.square && (
+      {modulatingWaveType === WaveType.square && (
         <FormRow>
-          <FormLabel>Duty Cycle</FormLabel>
+          <FormLabel>Modulating Duty Cycle</FormLabel>
           <Slider
-            value={dutyCyclePercent}
-            onChange={onChangeDutyCycle}
+            value={modulatingDutyCyclePercent}
+            onChange={onChangeModulatingDutyCycle}
           />
         </FormRow>
       )}
@@ -269,7 +286,7 @@ export function ModulatedContent() {
         </Button>
         : <Button
           variant="outlined"
-        onClick={() => handlePlay(getSelectedDataHandler())}
+        onClick={handlePlay}
         >
           Play
         </Button>
