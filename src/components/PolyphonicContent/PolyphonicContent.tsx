@@ -1,139 +1,111 @@
-import { Button, FormControlLabel, FormLabel, Radio, RadioGroup, Slider, TextField } from "@mui/material";
+import { Button, FormLabel, MenuItem, Select, Slider, TextField } from "@mui/material";
 import { useCallback, useState } from "react";
 
 import { ContentContainer, FormRow, WaveType } from "../Content";
 import { OvertonesButtonsContainer } from "./PolyphonicContent.styles";
-import type { DataHandlerParams, ISoundDataHandlers, SoundDataHandler } from "./PolyphonicContent.types";
+import type { DataHandlerParams, ISignalValueHandlers, Overtone, SignalValueHandler, SignalValueParams } from "./PolyphonicContent.types";
 
-class SoundDataHandlers implements ISoundDataHandlers {
-  sine(params: DataHandlerParams): Float32Array<ArrayBuffer> {
-    const { data, sampleRate, freq, overtoneVolumes } = params;
+const waveTypeOptions: { value: WaveType, label: string }[] = [
+  { value: WaveType.sine, label: 'Sine' },
+  { value: WaveType.sawtooth, label: 'Sawtooth' },
+  { value: WaveType.triangle, label: 'Triangle' },
+  { value: WaveType.square, label: 'Square' },
+  { value: WaveType.noise, label: 'Noise' },
+];
 
-    for (let i = 0; i < data.length; i++) {
-      for (let j = 0; j < overtoneVolumes.length; j++) {
+class SignalValueHandlers implements ISignalValueHandlers {
+  sine({ i, sampleRate, freq }: SignalValueParams): number {
+    return Math.sin(2 * Math.PI * freq * i / sampleRate);
+  }
+  triangle({ i, sampleRate, freq }: SignalValueParams): number {
+    const period = sampleRate / freq;
+    const cyclePosition = i % period;
+    const value = (cyclePosition / period) * 4 - 1;
 
-        function getSineSignalValue(freq: number): number {
-          return Math.sin(2 * Math.PI * freq * i / sampleRate);
-        }
+    return value <= 1 ? value : 2 - value;
+  }
+  square({ i, sampleRate, freq, dutyCycle }: SignalValueParams): number {
+    const period = sampleRate / freq;
+    const cyclePosition = i % period;
 
-        const overtonesTotal = overtoneVolumes.length;
-        const overtoneVolume = overtoneVolumes[j];
-        const finalFreq = freq * (j + 1);
-        data[i] += getSineSignalValue(finalFreq) * ((overtoneVolume / 100) / overtonesTotal);
-      }
+    return cyclePosition < (period * dutyCycle) ? 1 : -1;
+  }
+  sawtooth({ i, sampleRate, freq }: SignalValueParams): number {
+    const period = sampleRate / freq;
+    const cyclePosition = i % period;
+
+    return (cyclePosition / period) * 2 - 1;
+  }
+  noise(): number {
+    return Math.random() * 2 - 1;
+  }
+}
+
+const signalValueHandlers = new SignalValueHandlers();
+
+function getSignalValueHandler(waveType: WaveType): SignalValueHandler {
+  switch (waveType) {
+    case WaveType.sine:
+      return signalValueHandlers.sine;
+    case WaveType.triangle:
+      return signalValueHandlers.triangle;
+    case WaveType.square:
+      return signalValueHandlers.square;
+    case WaveType.sawtooth:
+      return signalValueHandlers.sawtooth;
+    case WaveType.noise:
+      return signalValueHandlers.noise;
+  }
+}
+
+function fillSoundData({ data, sampleRate, freq, overtones }: DataHandlerParams): Float32Array<ArrayBuffer> {
+  const voices = overtones.map((overtone, index) => ({
+    getSignalValue: getSignalValueHandler(overtone.waveType),
+    freq: freq * (index + 1),
+    dutyCycle: overtone.dutyCycle,
+    amplitude: (overtone.volume / 100) / overtones.length,
+  }));
+
+  for (let i = 0; i < data.length; i++) {
+    let value = 0;
+
+    for (const voice of voices) {
+      value += voice.getSignalValue({ i, sampleRate, freq: voice.freq, dutyCycle: voice.dutyCycle }) * voice.amplitude;
     }
 
-    return data;
+    data[i] = value;
   }
-  triangle(params: DataHandlerParams): Float32Array<ArrayBuffer> {
-    const { data, sampleRate, freq, overtoneVolumes } = params;
-    
-    for (let i = 0; i < data.length; i++) {
-      for (let j = 0; j < overtoneVolumes.length; j++) {
-        function getTriangleSignalValue(freq: number): number {
-          const period = sampleRate / freq;
-          const cyclePosition = i % period;
-          const value = (cyclePosition / period) * 4 - 1;
-          return value <= 1 ? value : 3 - value;
-        }
 
-        const finalFreq = freq * (j + 1);
-        const overtonesTotal = overtoneVolumes.length;
-        const overtoneVolume = overtoneVolumes[j];
-        data[i] += getTriangleSignalValue(finalFreq) * ((overtoneVolume / 100) / overtonesTotal);
-      }
-    }
-
-    return data;
-  }
-  square(params: DataHandlerParams): Float32Array<ArrayBuffer> {
-    const { data, sampleRate, freq, overtoneVolumes } = params;
-
-    for (let i = 0; i < data.length; i++) {
-      for (let j = 0; j < overtoneVolumes.length; j++) {
-        function getSquareSignalValue(freq: number): number {
-          const period = sampleRate / freq;
-          const dutyCycle = params.dutyCycle || 0.5;
-          const cyclePosition = i % period;
-          return cyclePosition < (period * dutyCycle) ? 1 : -1;
-        }
-
-        const finalFreq = freq * (j + 1);
-        const overtonesTotal = overtoneVolumes.length;
-        const overtoneVolume = overtoneVolumes[j];
-        data[i] += getSquareSignalValue(finalFreq) * ((overtoneVolume / 100) / overtonesTotal);
-      }
-    }
-    return data;
-  }
-  sawtooth(params: DataHandlerParams): Float32Array<ArrayBuffer> {
-    const { data, sampleRate, freq, overtoneVolumes } = params;
-
-    for (let i = 0; i < data.length; i++) {
-      for (let j = 0; j < overtoneVolumes.length; j++) {
-        function getSawtoothSignalValue(freq: number): number {
-          const period = sampleRate / freq;
-          const cyclePosition = i % period;
-          return (cyclePosition / period) * 2 - 1;
-        }
-
-        const finalFreq = freq * (j + 1);
-
-        const overtonesTotal = overtoneVolumes.length;
-        const overtoneVolume = overtoneVolumes[j];
-        data[i] += getSawtoothSignalValue(finalFreq) * ((overtoneVolume / 100) / overtonesTotal);
-      }
-    }
-    return data;
-  }
-  noise(params: DataHandlerParams): Float32Array<ArrayBuffer> {
-    const { data } = params;
-    
-    for (let i = 0; i < data.length; i++) {
-      data[i] = Math.random() * 2 - 1;
-    }
-
-    return data;
-  }
+  return data;
 }
 
 export function PolyphonicContent() {
 
   const [playingNode, setPlayingNode] = useState<AudioBufferSourceNode | null>(null);
-  const [waveType, setWaveType] = useState<WaveType>(WaveType.sine);
   const [frequency, setFrequency] = useState('440');
-  const [dutyCyclePercent, setDutyCyclePercent] = useState(50);
 
-  const [overtoneVolumes, setOvertoneVolumes] = useState<number[]>([]);
+  const [overtones, setOvertones] = useState<Overtone[]>([]);
+
+  const baseFreq = Number(frequency);
 
   const onFrequencyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFrequency(e.target.value);
   };
 
   const onAddOvertone = useCallback(() => {
-    setOvertoneVolumes([...overtoneVolumes, 100]);
-  }, [overtoneVolumes]);
+    setOvertones([...overtones, { waveType: WaveType.sine, volume: 100, dutyCycle: 0.5 }]);
+  }, [overtones]);
 
   const onRemoveOvertone = useCallback(() => {
-    const index = overtoneVolumes.length - 1;
-    setOvertoneVolumes(overtoneVolumes.filter((_, i) => i !== index));
-  }, [overtoneVolumes]);
+    const index = overtones.length - 1;
+    setOvertones(overtones.filter((_, i) => i !== index));
+  }, [overtones]);
 
-  const onChangeWaveType = (_: React.ChangeEvent<HTMLInputElement>, value: string) => {
-    setWaveType(value as WaveType);
-  }
+  const onUpdateOvertone = useCallback((index: number, changes: Partial<Overtone>) => {
+    setOvertones(overtones.map((overtone, i) => i === index ? { ...overtone, ...changes } : overtone));
+  }, [overtones]);
 
-  const onChangeDutyCycle = (_: Event, value: number ) => {
-    setDutyCyclePercent(value);
-  }
-
-  const onOvertoneVolumeChange = useCallback((index: number, value: number) => {
-    const newOvertoneVolumes = [...overtoneVolumes];
-    newOvertoneVolumes[index] = value;
-    setOvertoneVolumes(newOvertoneVolumes);
-  }, [overtoneVolumes]);
-
-  const handlePlay = (dataHandler: SoundDataHandler) => {
+  const handlePlay = () => {
     if (playingNode) {
       playingNode.stop();
       setPlayingNode(null);
@@ -152,7 +124,7 @@ export function PolyphonicContent() {
     const buffer = ctx.createBuffer(1, sampleRate * duration, sampleRate);
     const data = buffer.getChannelData(0);
 
-    data.set(dataHandler({ data, sampleRate, freq, dutyCycle: dutyCyclePercent / 100, overtoneVolumes }));
+    data.set(fillSoundData({ data, sampleRate, freq, overtones }));
 
     const source = ctx.createBufferSource();
     source.buffer = buffer;
@@ -170,47 +142,8 @@ export function PolyphonicContent() {
     setPlayingNode(null);
   }, [playingNode]);
 
-  const getSelectedDataHandler = useCallback(() => {
-    const soundDataHandlers = new SoundDataHandlers();
-    
-    switch (waveType) {
-      case WaveType.sine:
-        return soundDataHandlers.sine;
-      case WaveType.noise:
-        return soundDataHandlers.noise;
-      case WaveType.triangle:
-        return soundDataHandlers.triangle;
-      case WaveType.square:
-        return soundDataHandlers.square;
-      case WaveType.sawtooth:
-        return soundDataHandlers.sawtooth;
-    }
-  }, [waveType]);
-
   return (
     <ContentContainer>
-      <RadioGroup
-        sx={{
-          width: '100%',
-        }}
-        defaultValue={WaveType.sine}
-        onChange={onChangeWaveType}
-      >
-        <FormControlLabel value={WaveType.sine} control={<Radio />} label="Sine" />
-        <FormControlLabel value={WaveType.sawtooth} control={<Radio />} label="Sawtooth" />
-        <FormControlLabel value={WaveType.triangle} control={<Radio />} label="Triangle" />
-        <FormControlLabel value={WaveType.square} control={<Radio />} label="Square" />
-        <FormControlLabel value={WaveType.noise} control={<Radio />} label="Noise" />
-      </RadioGroup>
-      {waveType === WaveType.square && (
-        <FormRow>
-          <FormLabel>Duty Cycle</FormLabel>
-          <Slider
-            value={dutyCyclePercent}
-            onChange={onChangeDutyCycle}
-          />
-        </FormRow>
-      )}
       <TextField
         variant="outlined"
         label="Frequency (Hz)"
@@ -223,15 +156,35 @@ export function PolyphonicContent() {
         sx={{ width: '100%' }}
       />
       <FormRow>
-        <FormLabel>Overtone Volumes</FormLabel>
-        {overtoneVolumes.map((volume, index) => (
-          <FormRow>
-            <FormLabel>Overtone {index + 1}</FormLabel>
+        <FormLabel>Overtones</FormLabel>
+        {overtones.map((overtone, index) => (
+          <FormRow key={index}>
+            <FormLabel>
+              Overtone {index + 1}
+              {Number.isFinite(baseFreq) && baseFreq > 0 ? ` — ${Math.round(baseFreq * (index + 1))} Hz` : ''}
+            </FormLabel>
+            <Select
+              size="small"
+              value={overtone.waveType}
+              onChange={(e) => onUpdateOvertone(index, { waveType: e.target.value as WaveType })}
+            >
+              {waveTypeOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+              ))}
+            </Select>
             <Slider
-              key={index}
-              value={volume}
-              onChange={(_, value) => onOvertoneVolumeChange(index, value)}
+              value={overtone.volume}
+              onChange={(_, value) => onUpdateOvertone(index, { volume: value })}
             />
+            {overtone.waveType === WaveType.square && (
+              <>
+                <FormLabel>Duty Cycle</FormLabel>
+                <Slider
+                  value={overtone.dutyCycle * 100}
+                  onChange={(_, value) => onUpdateOvertone(index, { dutyCycle: value / 100 })}
+                />
+              </>
+            )}
           </FormRow>
         ))}
         <OvertonesButtonsContainer>
@@ -258,7 +211,7 @@ export function PolyphonicContent() {
         </Button>
         : <Button
           variant="outlined"
-        onClick={() => handlePlay(getSelectedDataHandler())}
+        onClick={handlePlay}
         >
           Play
         </Button>
