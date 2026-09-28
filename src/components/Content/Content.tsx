@@ -1,3 +1,4 @@
+import { MelodyContent } from "../MelodyContent";
 import { ModulatedContent } from "../ModulatedContent";
 import { MonophonicContent } from "../MonophonicContent";
 import { PolyphonicContent } from "../PolyphonicContent";
@@ -13,5 +14,7 @@ export function Content({
       return <PolyphonicContent />;
     case GenerateVariant.modulated:
       return <ModulatedContent />;
+    case GenerateVariant.melody:
+      return <MelodyContent />;
   }
 }

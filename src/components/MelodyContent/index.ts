@@ -1,0 +1,1 @@
+export { MelodyContent } from './MelodyContent';

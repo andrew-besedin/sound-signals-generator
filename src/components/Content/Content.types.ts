@@ -2,6 +2,7 @@ export const enum GenerateVariant {
   monophonic = 'monophonic',
   polyphonic = 'polyphonic',
   modulated = 'modulated',
+  melody = 'melody',
 }
 
 export interface ContentProps {

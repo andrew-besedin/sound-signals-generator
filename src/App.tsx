@@ -44,6 +44,12 @@ function App() {
           >
             Modulated
           </ToggleButton>
+          <ToggleButton
+            value={GenerateVariant.melody}
+            sx={{ flex: 1 }}
+          >
+            Melody
+          </ToggleButton>
         </ToggleButtonGroup>
         <Content generateVariant={generateVariant} />
       </WrappedInnerContainer>
